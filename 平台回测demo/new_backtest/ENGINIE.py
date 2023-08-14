@@ -1,7 +1,7 @@
 import threading
 import pandas as pd
 import numpy as np
-
+from calculate_position import *
 
 # 二维pivot数据以时间为columns， 以股票为index.
 
@@ -57,18 +57,22 @@ class BACK_TEST:
     def __init__(self, data_object):
         if not hasattr(self, '_inited'):
             self.data = data_object
-            self._inited = True
 
             # 初始化账户数据等，作为计量策略表现的依据
             self.TOTAL_position = pd.DataFrame(np.zeros(self.data.close.shape),
                                                index=self.data.close.index, columns=self.data.close.columns)
             self.position_DAILY_return = pd.Series(data=np.zeros(len(self.data.close.columns)), index=self.data.close.columns)
-    # 开始回测的过程
+            self._inited = True
 
 
-    def start_test(self, number_of_stock, weight_of_one_stock=0.01):
+
+    def start_test(self, number_of_stock, weight_of_one_stock=0.01):# 开始回测的过程
+        next_postition =
 
         for date in self.data.close.columns:
+            calculate_table = pd.cancat([self.TOTAL_position.loc[:,date], self.data.score_frame.loc[:,date]],axis=1)
+            calculate_table.columns = ["present_position", "score"]
+            next_postition = cal_new_position(calculate_table)
 
 
 
