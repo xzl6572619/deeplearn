@@ -19,7 +19,7 @@ DATA_OBJ = DATA(data)
 DATA_OBJ.get_score_data(DATA_OBJ.pctchange)
 
 INS_TEST = BACK_TEST(DATA_OBJ)
-INS_TEST.start_test()
+INS_TEST.start_test(weight_of_topstock=0.05, weight_decreaseing_rate=0.95)
 
 INS_TEST.net_value_change.to_csv("net_value_change.csv")
 print(INS_TEST.net_value_change)

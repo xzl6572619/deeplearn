@@ -2,7 +2,7 @@ import threading
 import pandas as pd
 import numpy as np
 from tqdm import trange
-from new_backtest.calculate_position import *
+from new_backtest.calculation import *
 
 
 # 二维pivot数据以时间为columns， 以股票为index.
@@ -67,8 +67,11 @@ class BACK_TEST:
                                                    index=self.data.close.columns)
             self._inited = True
             self.net_value_change = None
+            self.turnover = pd.DataFrame(np.zeros(self.data.close.shape),
+                                         index=self.data.close.index, columns=self.data.close.columns)
 
-    def start_test(self, number_of_stock=100, weight_of_one_stock=0.01, principle=1000000):  # 开始回测的过程
+    def start_test(self, number_of_stock=100, weight_of_topstock=0.01, weight_decreaseing_rate=0.95,
+                   principle=1000000):  # 开始回测的过程
         length = len(self.data.close.columns)
 
         for i in trange(1, length):
@@ -76,10 +79,14 @@ class BACK_TEST:
                                          self.data.score_frame.loc[:, self.data.close.columns[i - 1]]], axis=1)
             # calculate_table.to_csv("calculate_table_{}.csv".format(i))
             calculate_table.columns = ["present_position", "score"]
-            new_position = cal_new_position(calculate_table)  # 根据score进行排名并分配权重
+
+
+
+            new_position = cal_new_position(calculate_table, weight_of_topstock,
+                                            weight_decreaseing_rate).loc[:, "weight"]  # 根据score进行排名并分配权重
             # new_position.to_csv("new_position_{}.csv".format(i))
             self.TOTAL_position.loc[:, self.data.close.columns[i]].update(new_position)  # 对TOTAL_position进行更新
 
         stock_position_change = (self.data.pctchange / 100) * self.TOTAL_position  # 计算每只股票贡献的增长率
         totalposition_change = stock_position_change.sum().T  # 将所有股票贡献的成长率加总，获得position的增长率
-        self.net_value_change = (1 + totalposition_change).cumprod() * principle
+        self.net_value_change = (1 + totalposition_change).cumprod() * principle  # 计算本金的变动情况
