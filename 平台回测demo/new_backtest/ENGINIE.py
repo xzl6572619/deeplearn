@@ -67,8 +67,8 @@ class BACK_TEST:
                                                    index=self.data.close.columns)
             self._inited = True
             self.net_value_change = None
-            self.turnover = pd.DataFrame(np.zeros(self.data.close.shape),
-                                         index=self.data.close.index, columns=self.data.close.columns)
+            self.turnover = pd.Series(data=np.zeros(len(self.data.close.columns)),
+                                      index=self.data.close.columns)
 
     def start_test(self, number_of_stock=100, weight_of_topstock=0.01, weight_decreaseing_rate=0.95,
                    principle=1000000):  # 开始回测的过程
@@ -79,11 +79,17 @@ class BACK_TEST:
                                          self.data.score_frame.loc[:, self.data.close.columns[i - 1]]], axis=1)
             # calculate_table.to_csv("calculate_table_{}.csv".format(i))
             calculate_table.columns = ["present_position", "score"]
+            new_calculate_table = cal_new_position(calculate_table, weight_of_topstock,
+                                                   weight_decreaseing_rate)  # 根据score进行排名并分配权重
 
+            # 从包含新持仓信息的new_calculate_table中获取信息
+            position_diff = cal_daily_positiondiff(new_calculate_table)  # 计算前持仓和现持仓的difference
 
+            # 更新turnover换手率
+            self.turnover[self.data.close.columns[i]] = np.abs(position_diff).sum()/2
 
-            new_position = cal_new_position(calculate_table, weight_of_topstock,
-                                            weight_decreaseing_rate).loc[:, "weight"]  # 根据score进行排名并分配权重
+            # 更新position持仓状况
+            new_position = new_calculate_table.loc[:, "weight"]
             # new_position.to_csv("new_position_{}.csv".format(i))
             self.TOTAL_position.loc[:, self.data.close.columns[i]].update(new_position)  # 对TOTAL_position进行更新
 
