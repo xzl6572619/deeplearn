@@ -37,7 +37,7 @@ class DATA(object):
         else:
             raise AttributeError("Attribute '{}' for AshareData not defined.".format(attr_name))
 
-    # 获取打分数据，在这之前要将分数数据结构化
+    # 获取打分数据，在这之前要将分数数据结构化，好的股票分数更大。
     def get_score_data(self, score):
         # 首先获取数据框架frame，以让其与其他价格数据等对应
         self.score_frame = pd.DataFrame(columns=self.close.columns, index=self.close.index)
@@ -94,5 +94,5 @@ class BACK_TEST:
             self.TOTAL_position.loc[:, self.data.close.columns[i]].update(new_position)  # 对TOTAL_position进行更新
 
         stock_position_change = (self.data.pctchange / 100) * self.TOTAL_position  # 计算每只股票贡献的增长率
-        totalposition_change = stock_position_change.sum().T  # 将所有股票贡献的成长率加总，获得position的增长率
+        totalposition_change = stock_position_change.sum().T  # 将所有股票贡献的成长率加总，获得portfolio的增长率
         self.net_value_change = (1 + totalposition_change).cumprod() * principle  # 计算本金的变动情况
