@@ -42,7 +42,7 @@ def get_yjgg_data_base_year_month(year, month):  # 获取业绩快报的数据�
     df_list = []
     for statement_stage in statement_stage_list:
         df = ak.stock_yjkb_em(date=datetime.strftime(statement_stage, "%Y%m%d"))[
-            ["股票代码", "净利润-同比增长", "净利润-净利润", "公告日期"]]
+            ["股票代码", "净利润-同比增长", "净利润-净利润", "净资产收益率", "公告日期"]]
         df["accounting_period"] = statement_stage
         df_list.append(df)
     df_all = pd.concat(df_list, ignore_index=True)
@@ -73,9 +73,38 @@ def getwindstockcode(numcode):
     return windcode
 
 
+def stage_tier_func(x):
+    if x <= pd.Timedelta(days=0):
+        return 1
+    elif x <= pd.Timedelta(days=10):
+        return 3
+    elif x <= pd.Timedelta(days=20):
+        return 2
+    else:
+        return 1
+
+
+# TODO :
+def rebalancing_day(dt):  # 输入月份来获取该月调仓的日期设定，比如五六月份只在月初调仓，月中不变。
+    m = dt.month
+    d = dt.day
+
+    not_reblc_month_list = [5, 6, 9, 11, 12]
+
+
+def get_sue_data(code=None):
+    stock_financial_abstract_df = ak.stock_financial_abstract(symbol=code)
+    return stock_financial_abstract_df
+
+
+def get_roe_data(code, act_prd):  # 该函数输入股票代码和报告期，获得该股票在相关报告期的ROE数据。
+    act_prd_str = datetime.strftime(act_prd, "%Y%m%d")
+    stock_financial_abstract_df = ak.stock_financial_abstract(symbol=code)
+    roe = stock_financial_abstract_df.loc[11, act_prd_str]
+    return roe
+
+
 if __name__ == "__main__":
-    year = 2023
-    month = 4
-    res_df = get_yjgg_data_base_year_month(year, month)
-    res_df.to_csv("{0:}{1:}.csv".format(year, month))
-    print(res_df)
+    d = get_sue_data("600004")
+    d.to_csv("stock_financial_abstract_600004.csv")
+    print(d.columns[5], type(d.columns[5]))
