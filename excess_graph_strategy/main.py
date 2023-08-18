@@ -49,5 +49,5 @@ def calculate_day_timedistance(dt):
 
 
 # calculate_day_timedistance(today)
-a = pd.read_csv(r"D:\git\learn\deeplearn\excess_graph_strategy\csv_data\roe_code_period.txt")
-print(a)
+
+
