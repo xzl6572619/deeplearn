@@ -2,6 +2,7 @@ from datetime import date, datetime
 import numpy as np
 import akshare as ak
 import pandas as pd
+import sqlalchemy
 
 pd.set_option("display.max_columns", None)
 pd.set_option("display.width", 1000)
@@ -37,15 +38,30 @@ def get_yysj_data_base_year_month(year, month):
     return df_all
 
 
-def get_yjgg_data_base_year_month(year, month):  # 获取业绩快报的数据，包括业绩快报的公告日期；所快报的报告期；股票代码；净利润；净利润增长率。
+def get_yygg_data_base_year_month(year, month):  # 获取业绩快报的数据，包括业绩快报的公告日期；所快报的报告期；股票代码；净利润；净利润增长率；净资产收益率。
     statement_stage_list = calculte_statement_stage(year, month)
-    df_list = []
+    df_kb_list = []  # 业绩快报数据
     for statement_stage in statement_stage_list:
         df = ak.stock_yjkb_em(date=datetime.strftime(statement_stage, "%Y%m%d"))[
             ["股票代码", "净利润-同比增长", "净利润-净利润", "净资产收益率", "公告日期"]]
         df["accounting_period"] = statement_stage
-        df_list.append(df)
-    df_all = pd.concat(df_list, ignore_index=True)
+        df_kb_list.append(df)
+    df_kb_all = pd.concat(df_kb_list, ignore_index=True)
+
+    df_yg_list = []  # 业绩预告数据
+    for statement_stage in statement_stage_list:
+        df = ak.stock_yjyg_em(date=datetime.strftime(statement_stage, "%Y%m%d"))
+            # ]
+
+        filter = df.loc[:, "预测指标"] == "归属于上市公司股东的净利润"
+        df = df.loc[filter, ["股票代码", "业绩变动同比", "预测数值", "公告日期"]]
+        df.insert(3, "净资产收益率", np.NAN)
+        df["accounting_period"] = statement_stage
+        df_yg_list.append(df)
+    df_yg_all = pd.concat(df_yg_list, ignore_index=True)
+    df_yg_all.columns = ["股票代码", "净利润-同比增长", "净利润-净利润", "净资产收益率", "公告日期"]
+
+    df_all = pd.concat([df_kb_all, df_yg_all], ignore_index=True)
     return df_all
 
 
@@ -97,14 +113,41 @@ def get_sue_data(code=None):
     return stock_financial_abstract_df
 
 
-def get_roe_data(code, act_prd):  # 该函数输入股票代码和报告期，获得该股票在相关报告期的ROE数据。
-    act_prd_str = datetime.strftime(act_prd, "%Y%m%d")
-    stock_financial_abstract_df = ak.stock_financial_abstract(symbol=code)
-    roe = stock_financial_abstract_df.loc[11, act_prd_str]
-    return roe
+def get_roe_df():
+    # sim数据库
+    CONN_sim = sqlalchemy.create_engine('mysql+pymysql://root:xld6572619@192.168.3.60:3307/bond')
+
+    query = '''SELECT
+                code,
+                `日期` as period,
+                max(`净资产收益率`) as ROE
+            FROM
+                stock_financial_abstract
+            GROUP BY
+                code,
+                `日期`
+                '''
+    rROE = pd.read_sql_query(query, CONN_sim)
+    rROE.loc[rROE.loc[:, "ROE"] == '--', "ROE"] = np.NAN
+    rROE.loc[:, "period"] = pd.to_datetime(rROE.loc[:, "period"])
+
+    rROE.loc[:, "ROE"] = rROE["ROE"].astype('float')  # 此时的数据就是最终要用的ROE数据
+    return rROE
+
+
+def trddt_range(start_date, end_date):
+    CONN_sim = sqlalchemy.create_engine('mysql+pymysql://root:xld6572619@192.168.3.60:3307/bond')
+    query = "select distinct trddt from bond.quote_ashareeod_wind where trddt>='{0:%Y%m%d}' and trddt<='{1:%Y%m%d}'".format(
+        start_date, end_date)
+    trddt_df = pd.read_sql_query(query, CONN_sim)
+    return trddt_df
 
 
 if __name__ == "__main__":
-    d = get_sue_data("600004")
-    d.to_csv("stock_financial_abstract_600004.csv")
-    print(d.columns[5], type(d.columns[5]))
+    # start = date(2020, 1, 1)
+    # end = date(2020, 12, 31)
+    # trddt_range = trddt_range(start, end)
+    # print(trddt_range)
+    data = get_roe_df()
+
+    print(data.loc[data.loc[:, "code"] == "688295", :])
